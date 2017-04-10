@@ -2,20 +2,38 @@ package ng.cmd;
 
 import java.io.File;
 
-/*
+/**
  * shell program
  * 1.read from user input
  * 2.get command , options and parameters
- * 3.check command validity
- * 4.dispatch command to its execution function
+ * 3.dispatch command to its check parameter validity function
+ * 4.execution function
  */
 public class CmdShell implements IShell{
+	
+	private IShell shell;
+	
+	/**
+	 * command: test [string] [integer]
+	 * test if AOP is working
+	 */
+	public void cmd_test_aop(String[] objs){
+		write_to_shell("This is a test command for aop.\n");
+		String aop = objs[1];
+		Integer number = Integer.parseInt(objs[2]);
+		
+		write_to_shell("Input string:  " + aop + "\n");
+		write_to_shell("Input integer: " + number + "\n");
+		
+	}
 	
 	private String info_version = "My cmd shell 0.1";
 	private String info_usage = "command [parameter] [option]\n" +
 								"\n" +
 								"cmd supported:\n" + 
 								"\n" +
+								"    test aop [num]\n" +
+								"        test AOP\n" +
 								"    pwd\n" + 
 								"        print current working directory\n" +
 								"    cd [dir]\n" +
@@ -46,6 +64,9 @@ public class CmdShell implements IShell{
 								"    exit\n" +
 								"        exit shell";
 	
+	/*
+	 * maintain current working directory
+	 */
 	private String current_working_directory = "C:\\\\";
 	private String get_cwd(){
 		return current_working_directory;
@@ -54,38 +75,67 @@ public class CmdShell implements IShell{
 		current_working_directory = pwd;
 	}
 	
-	private void setup(){
-		new FileManager();
+	/**
+	 * build up shell
+	 */
+	public void setup(IShell shell){
+		this.shell = shell;
+		//read_from_shell();
 	}
 	
-	private void cmd_pwd(){
-		write_to_shell( get_cwd() + "\n");
+	/**
+	 * command: pwd
+	 * print current working directory
+	 */
+	public void cmd_pwd(){
+		write_to_shell_line( "CWD: " + get_cwd());
 	}
 	
-	private void cmd_cd(String dir){
-		set_cwd( FileManager.get_absolute_path(dir) );
+	/**
+	 * command: cd [directory]
+	 * change current working directory
+	 * let Audit to check the validity of input string
+	 * @dir need one valid directory
+	 */
+	public void cmd_cd(String dir){
+		set_cwd( FIleSystem.get_absolute_path(dir) );
 	}
 	
-	private void cmd_ls(String dir){
+	/**
+	 * command: ls [directory...]
+	 * @param dir
+	 */
+	public void cmd_ls(String[] dirs){
+		String dir = dirs[0];
+		
 		File directory = new File(dir);
 
 		if( !directory.exists() ){
-			write_to_shell( dir+ " not exist " + "\n");
+			write_to_shell_line( dir+ " not exist ");
 			return ;
 		}
 		if( !directory.isDirectory() ){
-			write_to_shell( dir+ " not directory " + "\n");
+			write_to_shell_line( dir+ " not directory ");
 			return ;
 		}
 		
 		
 	}
 	
-	private void cmd_exit(){
+	/**
+	 * exit the shell program. 
+	 * just set 'shell_running" to false
+	 */
+	public void cmd_exit(){
 		shell_running = false;
 	}
 	
-	private void dispatch_cmd(String[] cmds){
+	/**
+	 * according to the command which must be cmsds[0] 
+	 * send parameters to its execution function 
+	 * the validity check and logging will be executed by AOP Audit
+	 */
+	public void dispatch_cmd(String[] cmds){
 		
 		if(cmds == null || cmds.length == 0){
 			return ;
@@ -93,9 +143,10 @@ public class CmdShell implements IShell{
 		
 		String command = cmds[0];
 		switch( command ){
+		case "test":	shell.cmd_test_aop(cmds);	break;
 		case "pwd":	cmd_pwd();	break;
 		case "cd":	cmd_cd(cmds[1]);	break;
-		case "ls":	for(int i = 0; i < cmds.length-1; ++i) cmd_ls(cmds[ i+1 ]);	break;
+		case "ls":	cmd_ls(cmds);	break;
 		case "cat":
 			break;
 		case "append":
@@ -110,7 +161,7 @@ public class CmdShell implements IShell{
 			break;
 		case "rm":
 			break;
-		case "exit":cmd_exit();	break;
+		case "exit":	shell.cmd_exit();	break;
 		default:
 			break;
 		}
@@ -118,24 +169,20 @@ public class CmdShell implements IShell{
 	
 	private boolean shell_running = true;
 	
-	@Override
 	public void run()  {
-		setup();
 		shell_running = true;
 		while(shell_running){
-			write_to_shell( get_cwd() + " > " );
+			write_to_shell( get_cwd() + " javaShell > " );
 			String input  = read_from_shell();
 			String[] cmds = get_cmds_from_input( input );
 			dispatch_cmd( cmds) ;
 		}
 	}
 
-	@Override
 	public String get_version() {
 		return info_version;
 	}
 
-	@Override
 	public String get_usage() {
 		return info_usage;
 	}
@@ -146,11 +193,15 @@ public class CmdShell implements IShell{
 	}
 	
 	private String read_from_shell(){
-		String str = FileManager.io_read_from_console_line();
+		String str = FIleSystem.io_read_from_console_line();
 		return str;
 	}
 	
 	public static void write_to_shell(String str){
-		FileManager.io_write_to_console(str);
+		FIleSystem.io_write_to_console(str);
+	}
+	
+	public static void write_to_shell_line(String str){
+		FIleSystem.io_write_to_console_line(str);
 	}
 }

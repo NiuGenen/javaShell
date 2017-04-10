@@ -11,8 +11,13 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 public class ShellProgramConfig {
 
 	@Bean
-	public IShell cmd_shell() {
+	public CmdShell cmd_shell() {
 		return new CmdShell();
+	}
+	
+	@Bean
+	public Test_Bean test_bean(){
+		return new Test_Bean();
 	}
 	
 	@Bean

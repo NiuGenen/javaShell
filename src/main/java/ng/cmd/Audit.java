@@ -1,5 +1,6 @@
 package ng.cmd;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.aspectj.lang.JoinPoint;
@@ -13,64 +14,141 @@ import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.stereotype.Component;
 
+import ng.com.util.Util_time;
+
+@SuppressWarnings("unused")
 @Component
 @Aspect
 public class Audit {
 	
 	/*
 	 * test AOP execution order
-	 * @Pointcut to CmdShell.cmd_test_aop(String[] objs)
+	 * @Pointcut to CmdShell.test_aop(String[] objs)
 	 * @Around to get parameters , execution target function and print ret value
 	 * @Before to print information about this function
 	 * @After
 	 * @AfterReturning to print the return value
 	 */
-
-	@Around("execution(** ng.cmd.CmdShell.cmd_test_aop(..))")
-	public void around_shell_test_aop(ProceedingJoinPoint point) throws Throwable{
-		FIleSystem.io_write_to_console_line("[Around: before function]");
+	@Pointcut("execution(** ng.cmd.IAopTest.test_aop(..))")
+	public void test_aop(){}
+	@Around("test_aop()")
+	public Integer around_shell_test_aop(ProceedingJoinPoint point){
+		FileSystem.io_write_to_console_line("[Around: before function]");
 		//access function parameters
-		Object[] args = point.getArgs();
+		Object[] point_args = point.getArgs();
+		String[] args = (String[])point_args[0];
+		FileSystem.io_write_to_console_line("args.len=" + args.length);
 		for(int i=0; i<args.length; ++i){
-			FIleSystem.io_write_to_console_line("args["+i+"]="+args[i].getClass());
+			FileSystem.io_write_to_console_line("args[" + i + "]=" + args[i].getClass());
 		}
 		//execution function
-		Object ret = point.proceed(args);
+		Object ret = new Integer(-2);
+		try {
+			ret = point.proceed(point_args);
+		} catch (Throwable e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		//after function exe
-		FIleSystem.io_write_to_console_line("[Around: after function]");
-		FIleSystem.io_write_to_console_line("ret=" + ret);
+		FileSystem.io_write_to_console_line("[Around: after function]");
+		FileSystem.io_write_to_console_line("ret=" + ret);
+		//return to @AfterReturning
+		return (Integer)ret + 1;
 	}
-	
-	@Before("execution(** ng.cmd.CmdShell.cmd_test_aop(..))")
+	@Before("test_aop()")
 	public void before_shell_test_aop(JoinPoint point){
-		FIleSystem.io_write_to_console_line("[Before: print function]" + 
+		FileSystem.io_write_to_console_line("[Before: print function]" + 
                 point.getSignature().getDeclaringTypeName() + 
                 "." + point.getSignature().getName());
-		FIleSystem.io_write_to_console_line("[Before: print parameter ]" + Arrays.toString(point.getArgs()));
+		FileSystem.io_write_to_console_line("[Before: print parameter ]" + Arrays.toString(point.getArgs()));
 	}
-	
-	@After("execution(** ng.cmd.CmdShell.cmd_test_aop(..))")
+	@After("test_aop()")
 	public void after_shell_test_aop(JoinPoint point){
-		FIleSystem.io_write_to_console_line("[After]");
+		FileSystem.io_write_to_console_line("[After]");
+		FileSystem.io_write_to_console_line("Did nothing");
 	}
-
+	@AfterReturning(pointcut="test_aop()",returning="ret")
+	public void after_return_shell_test_aop(JoinPoint point, Object ret){
+		FileSystem.io_write_to_console_line("[After Returning]");
+		FileSystem.io_write_to_console_line("ret=" + (Integer)ret);
+	}
 	
 	/*
-	 * 
+	 * log command execution
 	 */
+	@Before("execution(** ng.cmd.IShell.cmd_*(..))")
+	public void before_all_command(JoinPoint point){
+		Object[] args = point.getArgs();
+		
+		LogRecord log_rcd = new LogRecord(Util_time.get_current_Calendar(),
+											LogType.LOG_TYPE_CMD,
+											"command execution");
+		
+		StringBuffer log_info = new StringBuffer();
+		boolean has_args = false;
+		
+		switch( point.getSignature().getName() )
+		{
+		case "cmd_pwd":   	log_info.append("pwd   ");    
+														break;
+		case "cmd_ls":    	log_info.append("ls    ");	has_args = true;
+														break;
+		case "cmd_cd":    	log_info.append("cd    ");	has_args = true;
+														break;
+		case "cmd_exit":  	log_info.append("exit  ");    
+														break;
+		case "cmd_cat":   	log_info.append("cat   ");	has_args = true;
+														break;
+		}
+
+		if(	has_args ){
+			for(Object arg: args){
+				log_info.append(arg);
+			}
+		}
+		
+		log_rcd.set_log_inof( log_info.toString() );
+		
+		try {
+			FileLogSystem.log_write_line(log_rcd.toString());
+		} catch (IOException e) {
+			e.printStackTrace();
+			FileSystem.io_write_to_console_line("[IOException] cannot write log in Audit.before_all_command");
+		}
+	}
 	
+	/*
+	 * shell start
+	 */
 	@Before( "execution(** ng.cmd.CmdShell.run(..))" )
 	public void before_shell_run(){
-		FIleSystem.io_write_to_console_line("Shell start running");
+		FileSystem.io_write_to_console_line("Shell start running");
+		
+		LogRecord log_rcd = new LogRecord(Util_time.get_current_Calendar(),
+				LogType.LOG_TYPE_START,
+				"Shell started");
+		
+		try {
+			FileLogSystem.log_write_line(log_rcd.toString());
+		} catch (IOException e) {
+			e.printStackTrace();
+			FileSystem.io_write_to_console_line("[IOException] cannot write log in Audit.before_shell_run");
+		}
 	}
 	
+	/*
+	 * shell exit
+	 */
 	@Before( "execution(** ng.cmd.CmdShell.cmd_exit(..))" )
 	public void before_shell_exit(){
-		FIleSystem.io_write_to_console_line("Shell exiting");
+		FileSystem.io_write_to_console_line("Shell exiting");
+		
+		FileSystem.io_write_to_console_line("exiting process: flush log file");
+		FileLogSystem.log_flush();
 	}
-	
 	@After( "execution(** ng.cmd.CmdShell.cmd_exit(..))" )
 	public void after_shell_exit(){
-		FIleSystem.io_write_to_console_line("Shell exited");
+		FileSystem.io_write_to_console_line("Shell exited");
+
 	}
 }

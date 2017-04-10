@@ -9,14 +9,21 @@ public class CmdMain {
 
 		@SuppressWarnings("resource")
 		ApplicationContext context = new AnnotationConfigApplicationContext(ShellProgramConfig.class);
-		IShell shell = context.getBean(IShell.class);
-
-		//Test_Bean t = context.getBean(Test_Bean.class);
-		//t.test_bean("asd");
 		
+		IAopTest aop_test = context.getBean(IAopTest.class);
+		String[] test_args = {"test","AOP","1"};
+		aop_test.test_aop(test_args);
+		
+		/*
+		 * if CmdShell implements IShell
+		 * then get CmdShell will fail
+		 * else succeed
+		 */
 		//CmdShell cs = context.getBean(CmdShell.class);
 		//cs.run();
-		
+
+		//shell start
+		IShell shell = context.getBean(IShell.class);
 		shell.setup(shell);
 		shell.run();
 	}

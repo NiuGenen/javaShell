@@ -16,11 +16,6 @@ public class ShellProgramConfig {
 	}
 	
 	@Bean
-	public Test_Bean test_bean(){
-		return new Test_Bean();
-	}
-	
-	@Bean
 	public Audit audit(){
 		return new Audit();
 	}

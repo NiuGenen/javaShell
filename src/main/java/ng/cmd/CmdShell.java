@@ -1,6 +1,7 @@
 package ng.cmd;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  * shell program
@@ -9,7 +10,7 @@ import java.io.File;
  * 3.dispatch command to its check parameter validity function
  * 4.execution function
  */
-public class CmdShell implements IShell{
+public class CmdShell implements IShell , IAopTest{
 	
 	private IShell shell;
 	
@@ -17,14 +18,18 @@ public class CmdShell implements IShell{
 	 * command: test [string] [integer]
 	 * test if AOP is working
 	 */
-	public void cmd_test_aop(String[] objs){
+	public Integer test_aop(String[] objs){
 		write_to_shell("This is a test command for aop.\n");
+		assert(objs.length >= 3);
+		String test = objs[0];
 		String aop = objs[1];
 		Integer number = Integer.parseInt(objs[2]);
 		
-		write_to_shell("Input string:  " + aop + "\n");
-		write_to_shell("Input integer: " + number + "\n");
+		write_to_shell_line("Input string: " + test);
+		write_to_shell_line("Input string:  " + aop);
+		write_to_shell_line("Input integer: " + number);
 		
+		return number + 1;
 	}
 	
 	private String info_version = "My cmd shell 0.1";
@@ -32,8 +37,6 @@ public class CmdShell implements IShell{
 								"\n" +
 								"cmd supported:\n" + 
 								"\n" +
-								"    test aop [num]\n" +
-								"        test AOP\n" +
 								"    pwd\n" + 
 								"        print current working directory\n" +
 								"    cd [dir]\n" +
@@ -49,10 +52,6 @@ public class CmdShell implements IShell{
 								"            -l : with line number\n" +
 								"            -s [num]: start at this line\n" +
 								"            -e [num]: end at this line\n" +
-								"    append [filename] [string]\n" +
-								"        append content into file\n" +
-								"    delete [filename] [num]\n" +
-								"        delete file's this line\n" +
 								"    mkdir [dir]\n" +
 								"        create directory\n" +
 								"    touch [filename]\n" +
@@ -67,20 +66,21 @@ public class CmdShell implements IShell{
 	/*
 	 * maintain current working directory
 	 */
-	private String current_working_directory = "C:\\\\";
-	private String get_cwd(){
+	private static String current_working_directory = "C:\\\\";
+	public static String get_cwd(){
 		return current_working_directory;
 	}
-	private void set_cwd(String pwd){
+	public static void set_cwd(String pwd){
 		current_working_directory = pwd;
 	}
 	
 	/**
-	 * build up shell
+	 * build up shell with its IShell interface 
+	 * for the AOP doesn't support nested call
+	 * cmd function need to access by IShell
 	 */
 	public void setup(IShell shell){
 		this.shell = shell;
-		//read_from_shell();
 	}
 	
 	/**
@@ -98,28 +98,46 @@ public class CmdShell implements IShell{
 	 * @dir need one valid directory
 	 */
 	public void cmd_cd(String dir){
-		set_cwd( FIleSystem.get_absolute_path(dir) );
+		set_cwd( FileSystem.get_absolute_path(dir) );
 	}
 	
 	/**
 	 * command: ls [directory...]
 	 * @param dir
 	 */
-	public void cmd_ls(String[] dirs){
-		String dir = dirs[0];
+	public void cmd_ls(String dir){
 		
 		File directory = new File(dir);
-
-		if( !directory.exists() ){
-			write_to_shell_line( dir+ " not exist ");
-			return ;
-		}
-		if( !directory.isDirectory() ){
-			write_to_shell_line( dir+ " not directory ");
-			return ;
-		}
 		
+		File[] subs = directory.listFiles();
+		for(File f : subs){
+			if(f.isFile()){
+				FileSystem.io_write_to_console_line("[F] " + f.getName());
+			}
+			else if(f.isDirectory()){
+				FileSystem.io_write_to_console_line("[D] " + f.getName());
+			}
+		}
+	}
+	
+	/**
+	 * print one file's content
+	 */
+	public void cmd_cat(String file) throws IOException{
 		
+		File f = new File(file);
+		
+		String content = FileSystem.io_read_from_file_all(f);
+		
+		FileSystem.io_write_to_console_line(content);
+	}
+	
+	/**
+	 * remove a file not a directory
+	 */
+	public boolean cmd_rm(String file){
+		File f = new File(file);
+		return f.delete();
 	}
 	
 	/**
@@ -134,8 +152,9 @@ public class CmdShell implements IShell{
 	 * according to the command which must be cmsds[0] 
 	 * send parameters to its execution function 
 	 * the validity check and logging will be executed by AOP Audit
+	 * @throws IOException 
 	 */
-	public void dispatch_cmd(String[] cmds){
+	public void dispatch_cmd(String[] cmds) throws IOException{
 		
 		if(cmds == null || cmds.length == 0){
 			return ;
@@ -143,16 +162,13 @@ public class CmdShell implements IShell{
 		
 		String command = cmds[0];
 		switch( command ){
-		case "test":	shell.cmd_test_aop(cmds);	break;
-		case "pwd":	cmd_pwd();	break;
-		case "cd":	cmd_cd(cmds[1]);	break;
-		case "ls":	cmd_ls(cmds);	break;
-		case "cat":
-			break;
-		case "append":
-			break;
-		case "delete":
-			break;
+		case "pwd":	shell.cmd_pwd();			break;
+		case "cd":	shell.cmd_cd(cmds[1]);		break;
+		case "ls":	if(cmds.length >= 2)
+						shell.cmd_ls(cmds[1]);
+					else
+						shell.cmd_ls(null);		break;
+		case "cat": shell.cmd_cat(cmds[1]); 	break;
 		case "mkdir":
 			break;
 		case "touch":
@@ -175,7 +191,11 @@ public class CmdShell implements IShell{
 			write_to_shell( get_cwd() + " javaShell > " );
 			String input  = read_from_shell();
 			String[] cmds = get_cmds_from_input( input );
-			dispatch_cmd( cmds) ;
+			try {
+				dispatch_cmd( cmds) ;
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -193,15 +213,15 @@ public class CmdShell implements IShell{
 	}
 	
 	private String read_from_shell(){
-		String str = FIleSystem.io_read_from_console_line();
+		String str = FileSystem.io_read_from_console_line();
 		return str;
 	}
 	
 	public static void write_to_shell(String str){
-		FIleSystem.io_write_to_console(str);
+		FileSystem.io_write_to_console(str);
 	}
 	
 	public static void write_to_shell_line(String str){
-		FIleSystem.io_write_to_console_line(str);
+		FileSystem.io_write_to_console_line(str);
 	}
 }

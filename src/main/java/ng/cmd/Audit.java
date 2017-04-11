@@ -46,7 +46,6 @@ public class Audit {
 		try {
 			ret = point.proceed(point_args);
 		} catch (Throwable e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		//after function exe
@@ -101,11 +100,9 @@ public class Audit {
 														break;
 		}
 
-		if(	has_args ){
-			for(Object arg: args){
-				log_info.append(arg);
-			}
-		}
+		if(	has_args )
+			for(Object arg: args)
+				log_info.append( arg + " ");
 		
 		log_rcd.set_log_inof( log_info.toString() );
 		
@@ -120,16 +117,18 @@ public class Audit {
 	/*
 	 * shell start
 	 */
-	@Before( "execution(** ng.cmd.CmdShell.run(..))" )
+	@Before( "execution(** ng.cmd.IShellFramework.loop_start(..))" )
 	public void before_shell_run(){
-		FileSystem.io_write_to_console_line("Shell start running");
+		FileSystem.io_write_to_console_line("[Before] Shell start running");
 		
-		LogRecord log_rcd = new LogRecord(Util_time.get_current_Calendar(),
+		LogRecord log_rcd = new LogRecord( 
+				Util_time.get_current_Calendar(),
 				LogType.LOG_TYPE_START,
-				"Shell started");
+				"Shell started"
+				);
 		
 		try {
-			FileLogSystem.log_write_line(log_rcd.toString());
+			FileLogSystem.log_write_line( log_rcd.toString() );
 		} catch (IOException e) {
 			e.printStackTrace();
 			FileSystem.io_write_to_console_line("[IOException] cannot write log in Audit.before_shell_run");
@@ -141,14 +140,9 @@ public class Audit {
 	 */
 	@Before( "execution(** ng.cmd.CmdShell.cmd_exit(..))" )
 	public void before_shell_exit(){
-		FileSystem.io_write_to_console_line("Shell exiting");
+		FileSystem.io_write_to_console_line("[Before] Shell exiting");
 		
-		FileSystem.io_write_to_console_line("exiting process: flush log file");
+		FileSystem.io_write_to_console_line("[Before] exiting process: flush log file");
 		FileLogSystem.log_flush();
-	}
-	@After( "execution(** ng.cmd.CmdShell.cmd_exit(..))" )
-	public void after_shell_exit(){
-		FileSystem.io_write_to_console_line("Shell exited");
-
 	}
 }

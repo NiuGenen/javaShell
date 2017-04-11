@@ -23,15 +23,15 @@ public class FileLogSystem {
 					return null;
 				}
 			}
+			sys_log = log_file;
 		}
-		sys_log = log_file;
 		return sys_log;
 	}
 	public static boolean log_write_line(String str) throws IOException{
 		if(sys_log == null) creat_log_file();
 		if(sys_log == null) return false;
 		
-		FileSystem.io_write_to_file_line(sys_log, str);
+		FileSystem.io_append_to_file_line(sys_log, str);
 		
 		++log_write_count;
 		if( log_write_count > log_flush_mask){

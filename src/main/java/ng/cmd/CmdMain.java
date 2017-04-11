@@ -24,8 +24,9 @@ public class CmdMain {
 
 		//shell start
 		IShell shell = context.getBean(IShell.class);
-		shell.setup(shell);
-		shell.run();
+		IShellFramework shell_fw = context.getBean(IShellFramework.class);
+		shell_fw.setup(shell);
+		shell_fw.loop_start();
 	}
 
 }

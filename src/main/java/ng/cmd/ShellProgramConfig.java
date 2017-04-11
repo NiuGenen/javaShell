@@ -16,6 +16,11 @@ public class ShellProgramConfig {
 	}
 	
 	@Bean
+	public CmdShellFramework cmd_shell_fw(){
+		return new CmdShellFramework();
+	}
+	
+	@Bean
 	public Audit audit(){
 		return new Audit();
 	}

@@ -12,22 +12,20 @@ import java.io.IOException;
  */
 public class CmdShell implements IShell , IAopTest{
 	
-	private IShell shell;
-	
 	/**
 	 * command: test [string] [integer]
 	 * test if AOP is working
 	 */
 	public Integer test_aop(String[] objs){
-		write_to_shell("This is a test command for aop.\n");
+		FileSystem.io_write_to_console_line("This is a test command for aop.\n");
 		assert(objs.length >= 3);
 		String test = objs[0];
 		String aop = objs[1];
 		Integer number = Integer.parseInt(objs[2]);
 		
-		write_to_shell_line("Input string: " + test);
-		write_to_shell_line("Input string:  " + aop);
-		write_to_shell_line("Input integer: " + number);
+		FileSystem.io_write_to_console_line("Input string: " + test);
+		FileSystem.io_write_to_console_line("Input string:  " + aop);
+		FileSystem.io_write_to_console_line("Input integer: " + number);
 		
 		return number + 1;
 	}
@@ -66,21 +64,12 @@ public class CmdShell implements IShell , IAopTest{
 	/*
 	 * maintain current working directory
 	 */
-	private static String current_working_directory = "C:\\\\";
-	public static String get_cwd(){
+	private String current_working_directory = "C:\\\\";
+	public String get_cwd(){
 		return current_working_directory;
 	}
-	public static void set_cwd(String pwd){
+	public void set_cwd(String pwd){
 		current_working_directory = pwd;
-	}
-	
-	/**
-	 * build up shell with its IShell interface 
-	 * for the AOP doesn't support nested call
-	 * cmd function need to access by IShell
-	 */
-	public void setup(IShell shell){
-		this.shell = shell;
 	}
 	
 	/**
@@ -88,26 +77,37 @@ public class CmdShell implements IShell , IAopTest{
 	 * print current working directory
 	 */
 	public void cmd_pwd(){
-		write_to_shell_line( "CWD: " + get_cwd());
+		FileSystem.io_write_to_console_line( "CWD: " + get_cwd() );
 	}
 	
 	/**
 	 * command: cd [directory]
 	 * change current working directory
 	 * let Audit to check the validity of input string
+	 * @throws IOException 
 	 * @dir need one valid directory
 	 */
-	public void cmd_cd(String dir){
-		set_cwd( FileSystem.get_absolute_path(dir) );
+	public void cmd_cd(String dir) throws IOException{
+		if(FileSystem.if_path_absolute(dir))
+			set_cwd( dir );
+		else if(FileSystem.if_path_relative(dir))
+			set_cwd( FileSystem.combine_path( get_cwd(), dir) );
+		else
+			FileSystem.io_write_to_stderror_line("connot resolve path: " + dir);
 	}
 	
 	/**
 	 * command: ls [directory...]
 	 * @param dir
+	 * @throws IOException 
 	 */
-	public void cmd_ls(String dir){
+	public void cmd_ls(String dir) throws IOException{
 		
-		File directory = new File(dir);
+		File directory = FileSystem.get_file_by_path(get_cwd(), dir);
+		if(directory == null){
+			FileSystem.io_write_to_stderror_line("cannot resolve path : " + dir);
+			return;
+		}
 		
 		File[] subs = directory.listFiles();
 		for(File f : subs){
@@ -125,7 +125,11 @@ public class CmdShell implements IShell , IAopTest{
 	 */
 	public void cmd_cat(String file) throws IOException{
 		
-		File f = new File(file);
+		File f = FileSystem.get_file_by_path(get_cwd(), file);
+		if( f == null ){
+			FileSystem.io_write_to_stderror_line("cannot resolve file : " + file);
+			return;
+		}
 		
 		String content = FileSystem.io_read_from_file_all(f);
 		
@@ -142,86 +146,16 @@ public class CmdShell implements IShell , IAopTest{
 	
 	/**
 	 * exit the shell program. 
-	 * just set 'shell_running" to false
+	 * using system.exit(0)
 	 */
 	public void cmd_exit(){
-		shell_running = false;
+		System.exit(0);
 	}
 	
-	/**
-	 * according to the command which must be cmsds[0] 
-	 * send parameters to its execution function 
-	 * the validity check and logging will be executed by AOP Audit
-	 * @throws IOException 
-	 */
-	public void dispatch_cmd(String[] cmds) throws IOException{
-		
-		if(cmds == null || cmds.length == 0){
-			return ;
-		}
-		
-		String command = cmds[0];
-		switch( command ){
-		case "pwd":	shell.cmd_pwd();			break;
-		case "cd":	shell.cmd_cd(cmds[1]);		break;
-		case "ls":	if(cmds.length >= 2)
-						shell.cmd_ls(cmds[1]);
-					else
-						shell.cmd_ls(null);		break;
-		case "cat": shell.cmd_cat(cmds[1]); 	break;
-		case "mkdir":
-			break;
-		case "touch":
-			break;
-		case "rmdir":
-			break;
-		case "rm":
-			break;
-		case "exit":	shell.cmd_exit();	break;
-		default:
-			break;
-		}
-	}
-	
-	private boolean shell_running = true;
-	
-	public void run()  {
-		shell_running = true;
-		while(shell_running){
-			write_to_shell( get_cwd() + " javaShell > " );
-			String input  = read_from_shell();
-			String[] cmds = get_cmds_from_input( input );
-			try {
-				dispatch_cmd( cmds) ;
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
-
 	public String get_version() {
 		return info_version;
 	}
-
 	public String get_usage() {
 		return info_usage;
-	}
-	
-	private String[] get_cmds_from_input(String input){
-		String[] cmds = input.split(" ");
-		return cmds;
-	}
-	
-	private String read_from_shell(){
-		String str = FileSystem.io_read_from_console_line();
-		return str;
-	}
-	
-	public static void write_to_shell(String str){
-		FileSystem.io_write_to_console(str);
-	}
-	
-	public static void write_to_shell_line(String str){
-		FileSystem.io_write_to_console_line(str);
 	}
 }

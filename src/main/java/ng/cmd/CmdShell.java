@@ -64,12 +64,16 @@ public class CmdShell implements IShell , IAopTest{
 	/*
 	 * maintain current working directory
 	 */
-	private String current_working_directory = "C:\\\\";
+	private static String current_working_directory = "C:\\\\";
 	public String get_cwd(){
 		return current_working_directory;
 	}
 	public void set_cwd(String pwd){
-		current_working_directory = pwd;
+		if(pwd != null)
+			current_working_directory = pwd;
+	}
+	public static String get_cwd_static(){
+		return current_working_directory;
 	}
 	
 	/**
@@ -87,13 +91,9 @@ public class CmdShell implements IShell , IAopTest{
 	 * @throws IOException 
 	 * @dir need one valid directory
 	 */
-	public void cmd_cd(String dir) throws IOException{
-		if(FileSystem.if_path_absolute(dir))
-			set_cwd( dir );
-		else if(FileSystem.if_path_relative(dir))
-			set_cwd( FileSystem.combine_path( get_cwd(), dir) );
-		else
-			FileSystem.io_write_to_stderror_line("connot resolve path: " + dir);
+	public void cmd_cd(String dir){
+		//AOP promise dir is a valid,exist directory or is null
+		set_cwd( dir );
 	}
 	
 	/**
@@ -101,7 +101,7 @@ public class CmdShell implements IShell , IAopTest{
 	 * @param dir
 	 * @throws IOException 
 	 */
-	public void cmd_ls(String dir) throws IOException{
+	public void cmd_ls(String dir){
 		
 		File directory = FileSystem.get_file_by_path(get_cwd(), dir);
 		if(directory == null){
@@ -123,8 +123,9 @@ public class CmdShell implements IShell , IAopTest{
 	/**
 	 * print one file's content
 	 */
-	public void cmd_cat(String file) throws IOException{
+	public void cmd_cat(String file){
 		
+		/*
 		File f = FileSystem.get_file_by_path(get_cwd(), file);
 		if( f == null ){
 			FileSystem.io_write_to_stderror_line("cannot resolve file : " + file);
@@ -132,6 +133,10 @@ public class CmdShell implements IShell , IAopTest{
 		}
 		
 		String content = FileSystem.io_read_from_file_all(f);
+		*/
+		
+		//input filename will be changed to content by AOP
+		String content = file;
 		
 		FileSystem.io_write_to_console_line(content);
 	}
@@ -139,9 +144,13 @@ public class CmdShell implements IShell , IAopTest{
 	/**
 	 * remove a file not a directory
 	 */
-	public boolean cmd_rm(String file){
-		File f = new File(file);
-		return f.delete();
+	public void cmd_rm(String file){
+		//ask user by AOP, if no then file will be set to null
+		//String file verified by AOP
+		if(file != null){
+			File f = FileSystem.get_file_by_path( get_cwd(), file);
+			f.delete();
+		}
 	}
 	
 	/**
@@ -157,5 +166,18 @@ public class CmdShell implements IShell , IAopTest{
 	}
 	public String get_usage() {
 		return info_usage;
+	}
+	
+	@Override
+	public void io_write_to_shell(String str) {
+		FileSystem.io_write_to_console( str);
+	}
+	@Override
+	public void io_write_to_shell_line(String str) {
+		FileSystem.io_write_to_console_line( str);
+	}
+	@Override
+	public String io_read_from_shell_line() {
+		return FileSystem.io_read_from_console_line();
 	}
 }

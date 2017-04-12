@@ -43,8 +43,8 @@ public class CmdShellFramework implements IShellFramework{
 			break;
 		case "rmdir":
 			break;
-		case "rm":
-			break;
+		case "rm":	if(cmds.length >= 2)
+						shell.cmd_rm(cmds[1]);		break;
 		case "exit":	shell.cmd_exit();			break;
 		default:
 			break;

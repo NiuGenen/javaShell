@@ -16,6 +16,11 @@ import org.springframework.stereotype.Component;
 
 import ng.com.util.Util_time;
 
+/**
+ * for log and test
+ * @author 60213
+ *
+ */
 @SuppressWarnings("unused")
 @Component
 @Aspect
@@ -98,6 +103,8 @@ public class Audit {
 														break;
 		case "cmd_cat":   	log_info.append("cat   ");	has_args = true;
 														break;
+		case "cmd_rm":		log_info.append("rm    ");  has_args = true;
+														break;
 		}
 
 		if(	has_args )
@@ -106,12 +113,7 @@ public class Audit {
 		
 		log_rcd.set_log_inof( log_info.toString() );
 		
-		try {
-			FileLogSystem.log_write_line(log_rcd.toString());
-		} catch (IOException e) {
-			e.printStackTrace();
-			FileSystem.io_write_to_console_line("[IOException] cannot write log in Audit.before_all_command");
-		}
+		FileLogSystem.log_write_line(log_rcd.toString());
 	}
 	
 	/*
@@ -127,12 +129,8 @@ public class Audit {
 				"Shell started"
 				);
 		
-		try {
-			FileLogSystem.log_write_line( log_rcd.toString() );
-		} catch (IOException e) {
-			e.printStackTrace();
-			FileSystem.io_write_to_console_line("[IOException] cannot write log in Audit.before_shell_run");
-		}
+		FileLogSystem.log_write_line( log_rcd.toString() );
+		
 	}
 	
 	/*

@@ -40,7 +40,7 @@ public class FileSystem {
 	public static void io_write_to_console_line(String str){
 		System.out.println(str);
 	}
-	public static void io_write_to_stderror_line(String info) throws IOException{
+	public static void io_write_to_stderror_line(String info){
 		LogRecord log_rcd = new LogRecord(
 				Util_time.get_current_Calendar(),
 				LogType.LOG_TYPE_ERROR,
@@ -72,17 +72,21 @@ public class FileSystem {
 	 * @param str
 	 * @throws IOException
 	 */
-	public static void io_write_to_file_line(File f, String str) throws IOException{
+	public static void io_write_to_file_line(File f, String str){
 		//io_write_to_console_line(str);
-		FileOutputStream fos = null;
-		if( !map_file_to_fos.containsKey(f) ){
-			fos = new FileOutputStream(f);
-			map_file_to_fos.put(f, fos);
-			fos.write(str.getBytes());
-		}else{
-			fos = map_file_to_fos.get(f);
+		try{
+			FileOutputStream fos = null;
+			if( !map_file_to_fos.containsKey(f) ){
+				fos = new FileOutputStream(f);
+				map_file_to_fos.put(f, fos);
+				fos.write(str.getBytes());
+			}else{
+				fos = map_file_to_fos.get(f);
+			}
+			fos.write( (str + "\r\n" ).getBytes());
+		}catch(IOException ioe){
+			ioe.printStackTrace();
 		}
-		fos.write( (str + "\r\n" ).getBytes());
 	}
 	/**
 	 * append one line to the File. 
@@ -93,16 +97,20 @@ public class FileSystem {
 	 * @param str
 	 * @throws IOException
 	 */
-	public static void io_append_to_file_line(File f, String str) throws IOException{
-		FileOutputStream fos = null;
-		if( !map_file_to_fos.containsKey(f) ){
-			fos = new FileOutputStream(f, true);
-			map_file_to_fos.put(f, fos);
-			fos.write(str.getBytes());
-		}else{
-			fos = map_file_to_fos.get(f);
+	public static void io_append_to_file_line(File f, String str){
+		try {
+			FileOutputStream fos = null;
+			if( !map_file_to_fos.containsKey(f) ){
+				fos = new FileOutputStream(f, true);
+				map_file_to_fos.put(f, fos);
+				fos.write(str.getBytes());
+			}else{
+				fos = map_file_to_fos.get(f);
+			}
+			fos.write( (str + "\r\n" ).getBytes());
+		}catch (IOException e) {
+			e.printStackTrace();
 		}
-		fos.write( (str + "\r\n" ).getBytes());
 	}
 	/**
 	 * using BufferReader to read an text file. 
@@ -111,13 +119,22 @@ public class FileSystem {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String io_read_from_file_all(File f) throws IOException{
-		FileInputStream fis = new FileInputStream(f);
-		@SuppressWarnings("resource")
-		BufferedReader fis_rdr = new BufferedReader(new InputStreamReader(fis));
+	public static String io_read_from_file_all(String filepath) {
+		File f = new File(filepath);
 		StringBuffer ret = new StringBuffer();
-		while( fis_rdr.ready() ){
-			ret.append( fis_rdr.readLine() );
+		try {
+			FileInputStream fis = new FileInputStream(f);
+			@SuppressWarnings("resource")
+			BufferedReader fis_rdr = new BufferedReader(new InputStreamReader(fis));
+			while( fis_rdr.ready() ){
+				ret.append( fis_rdr.readLine() + "\n");
+			}
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		return ret.toString();
 	}
@@ -127,11 +144,15 @@ public class FileSystem {
 	 * @param f
 	 * @throws IOException
 	 */
-	public static void io_close_file(File f) throws IOException{
-		if(map_file_to_fos.containsKey(f)){
-			FileOutputStream fos = map_file_to_fos.get(f);
-			fos.close();
-			map_file_to_fos.remove(f);
+	public static void io_close_file(File f){
+		try {
+			if(map_file_to_fos.containsKey(f)){
+				FileOutputStream fos = map_file_to_fos.get(f);
+				fos.close();
+				map_file_to_fos.remove(f);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	/**
@@ -140,10 +161,14 @@ public class FileSystem {
 	 * @param f
 	 * @throws IOException
 	 */
-	public static void io_flush_file(File f) throws IOException{
-		if(map_file_to_fos.containsKey(f)){
-			FileOutputStream fos = map_file_to_fos.get(f);
-			fos.flush();
+	public static void io_flush_file(File f){
+		try {
+			if(map_file_to_fos.containsKey(f)){
+				FileOutputStream fos = map_file_to_fos.get(f);
+				fos.flush();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -251,8 +276,8 @@ public class FileSystem {
 		
 		return path;
 	}
-	public static boolean if_file_exist(File file){
-		return file.exists();
+	public static boolean if_file_exist(String file){
+		return new File(file).exists();
 	}
 	public static boolean if_file_is_dir(String dir){
 		File file = new File(dir);

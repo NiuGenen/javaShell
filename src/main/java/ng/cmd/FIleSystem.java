@@ -120,7 +120,7 @@ public class FileSystem {
 	 * @throws IOException
 	 */
 	public static String io_read_from_file_all(String filepath) {
-		File f = new File(filepath);
+		File f = new File( filepath );
 		StringBuffer ret = new StringBuffer();
 		try {
 			FileInputStream fis = new FileInputStream(f);
@@ -130,10 +130,8 @@ public class FileSystem {
 				ret.append( fis_rdr.readLine() + "\n");
 			}
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return ret.toString();

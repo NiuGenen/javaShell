@@ -24,4 +24,9 @@ public class ShellProgramConfig {
 	public Audit audit(){
 		return new Audit();
 	}
+	
+	@Bean
+	public CmdShellAspect cmd_shell_aspect(){
+		return new CmdShellAspect();
+	}
 }

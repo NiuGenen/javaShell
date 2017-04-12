@@ -17,15 +17,16 @@ public class CmdShell implements IShell , IAopTest{
 	 * test if AOP is working
 	 */
 	public Integer test_aop(String[] objs){
-		FileSystem.io_write_to_console_line("This is a test command for aop.\n");
+		FileSystem.io_write_to_console_line("[Test Aop start]");
+		FileSystem.io_write_to_console_line("This is a test command for aop.");
 		assert(objs.length >= 3);
 		String test = objs[0];
 		String aop = objs[1];
 		Integer number = Integer.parseInt(objs[2]);
 		
-		FileSystem.io_write_to_console_line("Input string: " + test);
-		FileSystem.io_write_to_console_line("Input string:  " + aop);
-		FileSystem.io_write_to_console_line("Input integer: " + number);
+		io_write_to_shell_line("Input string: " + test);
+		io_write_to_shell_line("Input string:  " + aop);
+		io_write_to_shell_line("Input integer: " + number);
 		
 		return number + 1;
 	}
@@ -81,7 +82,7 @@ public class CmdShell implements IShell , IAopTest{
 	 * print current working directory
 	 */
 	public void cmd_pwd(){
-		FileSystem.io_write_to_console_line( "CWD: " + get_cwd() );
+		io_write_to_shell_line( "CWD: " + get_cwd() );
 	}
 	
 	/**
@@ -112,10 +113,10 @@ public class CmdShell implements IShell , IAopTest{
 		File[] subs = directory.listFiles();
 		for(File f : subs){
 			if(f.isFile()){
-				FileSystem.io_write_to_console_line("[F] " + f.getName());
+				io_write_to_shell_line("[F] " + f.getName());
 			}
 			else if(f.isDirectory()){
-				FileSystem.io_write_to_console_line("[D] " + f.getName());
+				io_write_to_shell_line("[D] " + f.getName());
 			}
 		}
 	}
@@ -135,10 +136,10 @@ public class CmdShell implements IShell , IAopTest{
 		String content = FileSystem.io_read_from_file_all(f);
 		*/
 		
-		//input filename will be changed to content by AOP
+		//input filename will be changed to its content by AOP
 		String content = file;
 		
-		FileSystem.io_write_to_console_line(content);
+		io_write_to_shell_line(content);
 	}
 	
 	/**
@@ -149,7 +150,9 @@ public class CmdShell implements IShell , IAopTest{
 		//String file verified by AOP
 		if(file != null){
 			File f = FileSystem.get_file_by_path( get_cwd(), file);
-			f.delete();
+			if( !f.delete() ){
+				FileSystem.io_write_to_stderror_line("[ERROR] cannot delete file : " + f.getAbsolutePath() );
+			}
 		}
 	}
 	

@@ -16,7 +16,7 @@ import javax.naming.NamingException;
 import ng.cmd.FileSystem;
 import ng.cmd.IShellFramework;
 
-public class JmsShell implements IShellFramework{
+public class JmsShellTest implements IShellFramework{
 	
     private static final String DEFAULT_CONNECTION_FACTORY = "jms/RemoteConnectionFactory";
     private static final String DEFAULT_DESTINATION = "jms/topic/test";
@@ -65,7 +65,7 @@ public class JmsShell implements IShellFramework{
 	}
 	
 	private Context namingContext;
-	private Destination destination;
+	private  Destination destination;
 	private ConnectionFactory connectionFactory;
 	private JMSContext context;
 	private String userName;
@@ -153,14 +153,15 @@ public class JmsShell implements IShellFramework{
 
 	@Override
 	public String get_version() {
-		// TODO Auto-generated method stub
-		return null;
+		return "jms shell test 0.1";
 	}
 
 	@Override
 	public String get_usage() {
-		// TODO Auto-generated method stub
-		return null;
+		return 	"read" + 
+				"	read one message received" +
+				"send [content]" +
+				"	send ont message";
 	}
 
 	

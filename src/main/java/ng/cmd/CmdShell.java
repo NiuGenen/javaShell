@@ -3,7 +3,7 @@ package ng.cmd;
 import java.io.File;
 import java.io.IOException;
 
-import ng.jms.client.JmsShell;
+import ng.jms.client.JmsShellTest;
 
 /**
  * shell program
@@ -61,6 +61,8 @@ public class CmdShell implements ICmdShell , IAopTest{
 								"        delete one directory\n" +
 								"    rm [filename]\n" +
 								"        delete one file\n" +
+								"	jmstest" +
+								"		enter jms shell test" +
 								"	jms" +
 								"		enter jms shell" +
 								"    exit\n" +
@@ -189,11 +191,11 @@ public class CmdShell implements ICmdShell , IAopTest{
 	}
 	
 	/**
-	 * start jms client
+	 * start jms client test
 	 */
 	@Override
-	public void jms_client() {
-		IShellFramework jms = new JmsShell();
+	public void jms_client_test() {
+		IShellFramework jms = new JmsShellTest();
 		jms.setup(null);
 		jms.loop_start();
 	}

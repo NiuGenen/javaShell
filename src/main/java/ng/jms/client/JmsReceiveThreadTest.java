@@ -6,7 +6,7 @@ import javax.jms.JMSConsumer;
 
 import ng.cmd.FileSystem;
 
-public class JmsReceiveThread extends Thread{
+public class JmsReceiveThreadTest extends Thread{
 
 	private Queue<String> buffer;
 	private JMSConsumer consumer;

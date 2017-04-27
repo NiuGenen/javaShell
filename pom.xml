@@ -7,8 +7,8 @@
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>1.0.2.RELEASE</version>
 	</parent>
-	<artifactId>aop</artifactId>
-	<groupId>ng</groupId>
+	<artifactId>ShellClient</artifactId>
+	<groupId>ShellClient</groupId>
 	<name>Spring Boot AOP Sample</name>
 	<description>Spring Boot AOP Sample</description>
 	<version>0.0.1-SNAPSHOT</version>
@@ -17,6 +17,7 @@
 		<name>Pivotal Software, Inc.</name>
 		<url>http://www.spring.io</url>
 	</organization>
+	
 	<properties>
 		<main.basedir>${basedir}/../..</main.basedir>
 		

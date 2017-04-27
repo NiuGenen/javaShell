@@ -25,5 +25,5 @@ public interface ICmdShell {
 	/*
 	 * jma client supported
 	 */
-	void jms_client();
+	void jms_client_test();
 }

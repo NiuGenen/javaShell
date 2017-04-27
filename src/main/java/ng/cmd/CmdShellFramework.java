@@ -30,7 +30,7 @@ public class CmdShellFramework implements IShellFramework{
 		
 		String command = cmds[0];
 		switch( command ){
-		case "jms": shell.jms_client();				break;
+		case "jmstest": shell.jms_client_test();	break;
 		case "pwd":	shell.cmd_pwd();				break;
 		case "cd":	shell.cmd_cd(cmds[1]);			break;
 		case "ls":	if(cmds.length >= 2)

@@ -2,7 +2,7 @@ package ng.cmd;
 
 import java.io.IOException;
 
-public interface IShell {
+public interface ICmdShell {
 	/*
 	 * basic command supported by Shell
 	 */
@@ -17,11 +17,13 @@ public interface IShell {
 	 */
 	String get_cwd();
 	void set_cwd(String wd);
-	
 	String get_version();
 	String get_usage();
-
 	void io_write_to_shell(String str);
 	void io_write_to_shell_line(String str);
 	String io_read_from_shell_line();
+	/*
+	 * jma client supported
+	 */
+	void jms_client();
 }

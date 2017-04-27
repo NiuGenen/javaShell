@@ -23,7 +23,7 @@ public class CmdMain {
 		//cs.run();
 
 		//shell start
-		IShell shell = context.getBean(IShell.class);
+		ICmdShell shell = context.getBean(ICmdShell.class);
 		IShellFramework shell_fw = context.getBean(IShellFramework.class);
 		shell_fw.setup(shell);
 		shell_fw.loop_start();

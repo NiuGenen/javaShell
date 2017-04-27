@@ -87,7 +87,7 @@ public class Audit {
 	/*
 	 * log command execution
 	 */
-	@Before("execution(** ng.cmd.IShell.cmd_*(..))")
+	@Before("execution(** ng.cmd.ICmdShell.cmd_*(..))")
 	public void before_all_command(JoinPoint point){
 		Object[] args = point.getArgs();
 		
@@ -155,7 +155,7 @@ public class Audit {
 	 * origin CmdShellAspect
 	 */
 
-	@Around("execution(** ng.cmd.IShell.cmd_rm(..))")
+	@Around("execution(** ng.cmd.ICmdShell.cmd_rm(..))")
 	public void around_shell_cmd_rm(ProceedingJoinPoint point){
 		//get arguments
 		Object[] args = point.getArgs();
@@ -212,7 +212,7 @@ public class Audit {
 		}
 	}
 	
-	@Around("execution(** ng.cmd.IShell.cmd_cat(..))")
+	@Around("execution(** ng.cmd.ICmdShell.cmd_cat(..))")
 	public void around_shell_cmd_cat(ProceedingJoinPoint point){
 		//verify arguments' validity
 		Object[] args = point.getArgs();
@@ -268,7 +268,7 @@ public class Audit {
 		
 	}
 
-	@Around("execution(** ng.cmd.IShell.cmd_cd(..))")
+	@Around("execution(** ng.cmd.ICmdShell.cmd_cd(..))")
 	public void around_shell_cmd_cd(ProceedingJoinPoint point){
 		//verify arguments' validity
 		Object[] args = point.getArgs();
@@ -303,5 +303,14 @@ public class Audit {
 			FileLogSystem.log_write_line(log.toString());
 		}
 		//end around
+	}
+	
+	@Before("execution(** ng.cmd.CmdShell.jms_client(..))")
+	public void before_jms_client(){
+		LogRecord log_rcd = new LogRecord(Util_time.get_current_Calendar(),
+				LogType.LOG_TYPE_EXE,
+				"jms client start");
+		
+		FileLogSystem.log_write_line(log_rcd.toString());
 	}
 }

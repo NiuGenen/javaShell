@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public class CmdShellFramework implements IShellFramework{
 	
-	private IShell shell = null;
+	private ICmdShell shell = null;
 	
 	/**
 	 * build up shell with its IShell interface 
@@ -12,7 +12,7 @@ public class CmdShellFramework implements IShellFramework{
 	 * cmd function need to access by IShell
 	 */
 	public void setup(Object shell){
-		this.shell = (IShell)shell;
+		this.shell = (ICmdShell)shell;
 	}
 	
 
@@ -30,6 +30,7 @@ public class CmdShellFramework implements IShellFramework{
 		
 		String command = cmds[0];
 		switch( command ){
+		case "jms": shell.jms_client();				break;
 		case "pwd":	shell.cmd_pwd();				break;
 		case "cd":	shell.cmd_cd(cmds[1]);			break;
 		case "ls":	if(cmds.length >= 2)
@@ -62,7 +63,6 @@ public class CmdShellFramework implements IShellFramework{
 	private void write_to_shell(String str){
 		FileSystem.io_write_to_console(str);
 	}
-	@SuppressWarnings("unused")
 	private void write_to_shell_line(String str){
 		FileSystem.io_write_to_console_line(str);
 	}

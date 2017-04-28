@@ -3,6 +3,7 @@ package ng.cmd;
 import java.io.File;
 import java.io.IOException;
 
+import ng.jms.client.JmsShell;
 import ng.jms.client.JmsShellTest;
 
 /**
@@ -196,6 +197,12 @@ public class CmdShell implements ICmdShell , IAopTest{
 	@Override
 	public void jms_client_test() {
 		IShellFramework jms = new JmsShellTest();
+		jms.setup(null);
+		jms.loop_start();
+	}
+	@Override
+	public void jms_client() {
+		IShellFramework jms = new JmsShell();
 		jms.setup(null);
 		jms.loop_start();
 	}

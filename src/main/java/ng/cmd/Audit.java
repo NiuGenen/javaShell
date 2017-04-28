@@ -304,12 +304,21 @@ public class Audit {
 		}
 		//end around
 	}
+
+	@Before("execution(** ng.cmd.CmdShell.jms_client_test(..))")
+	public void before_jms_client_test(){
+		LogRecord log_rcd = new LogRecord(Util_time.get_current_Calendar(),
+				LogType.LOG_TYPE_EXE,
+				"jms client test");
+		
+		FileLogSystem.log_write_line(log_rcd.toString());
+	}
 	
 	@Before("execution(** ng.cmd.CmdShell.jms_client(..))")
 	public void before_jms_client(){
 		LogRecord log_rcd = new LogRecord(Util_time.get_current_Calendar(),
 				LogType.LOG_TYPE_EXE,
-				"jms client start");
+				"jms client run");
 		
 		FileLogSystem.log_write_line(log_rcd.toString());
 	}

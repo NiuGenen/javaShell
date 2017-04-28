@@ -1,7 +1,9 @@
 package ng.jms.client;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 import java.util.Queue;
 
@@ -13,10 +15,24 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import org.apache.activemq.artemis.utils.json.JSONArray;
+import org.apache.activemq.artemis.utils.json.JSONException;
+import org.apache.activemq.artemis.utils.json.JSONObject;
+
 import ng.cmd.FileSystem;
 import ng.cmd.IShellFramework;
+import ng.com.util.Util_http;
 
+@SuppressWarnings("unused")
 public class JmsShell implements IShellFramework{
+
+	
+	private Context namingContext;
+	private Destination destination;
+	private ConnectionFactory connectionFactory;
+	private JMSContext context;
+	private String userName;
+	private String password;
 	
     private static final String DEFAULT_CONNECTION_FACTORY = "jms/RemoteConnectionFactory";
     private static final String DEFAULT_DESTINATION = "jms/topic/test";
@@ -31,45 +47,39 @@ public class JmsShell implements IShellFramework{
 	public void setup(Object o) {
 		msg_received = new LinkedList<>();
 
-		try{
-            userName = System.getProperty("username", DEFAULT_USERNAME);
-            password = System.getProperty("password", DEFAULT_PASSWORD);
-
-            // Set up the namingContext for the JNDI lookup
-            final Properties env = new Properties();
-            env.put(Context.INITIAL_CONTEXT_FACTORY, INITIAL_CONTEXT_FACTORY);
-            env.put(Context.PROVIDER_URL, System.getProperty(Context.PROVIDER_URL, PROVIDER_URL));
-            env.put(Context.SECURITY_PRINCIPAL, userName);
-            env.put(Context.SECURITY_CREDENTIALS, password);
-            namingContext = new InitialContext(env);
-
-            // Perform the JNDI lookups
-            String connectionFactoryString = System.getProperty("connection.factory", DEFAULT_CONNECTION_FACTORY);
-
-            connectionFactory = (ConnectionFactory) namingContext.lookup(connectionFactoryString);
-
-            String destinationString = System.getProperty("destination", DEFAULT_DESTINATION);
-
-            destination = (Destination) namingContext.lookup(destinationString);
-
-    		context = connectionFactory.createContext(userName, password);
-    		
-    		jmsRT = new JmsReceiveThreadTest();
-    		JMSConsumer consumer = context.createConsumer(destination);
-    		jmsRT.setup(msg_received, consumer);
-    		jmsRT.start();
-    		
-		} catch(Exception e){
-			e.printStackTrace();
-		}
+		remote_get_topics();
 	}
 	
-	private Context namingContext;
-	private Destination destination;
-	private ConnectionFactory connectionFactory;
-	private JMSContext context;
-	private String userName;
-	private String password;
+	private List<String> topics = null;
+	private void remote_get_topics(){
+		String ret = Util_http.sendPost("http://localhost:8080/shell_server/GetTopicsServlet",
+				"posttime=" + System.currentTimeMillis() );
+		
+		write_to_shell_line(ret);
+		
+		try {
+			JSONObject obj = new JSONObject(ret);
+			
+			JSONArray array = obj.getJSONArray("topics");
+			topics = new LinkedList<String>( );
+			for(int i = 0; i < array.length(); ++i){
+				JSONObject t = array.getJSONObject(i);
+				topics.add( t.getString("name") );
+			}
+			
+		} catch (JSONException e) {
+			write_to_shell_line("Failed to resolve JSON string in remote_get_topics");
+			e.printStackTrace();
+			jms_exit();
+		}
+		
+	}
+	
+	private void jms_topics(){
+		for(String topic: topics){
+			write_to_shell_line("Topic: " + topic);
+		}
+	}
 	
 	private void jms_send(String[] cmds){
 		if(cmds.length < 2) return;
@@ -111,6 +121,7 @@ public class JmsShell implements IShellFramework{
 		
 		String command = cmds[0];
 		switch( command ){
+		case "topics":	jms_topics();		break;
 		case "send":	jms_send(cmds);		break;
 		case "read":	jms_read(cmds);		break;
 		case "exit":	jms_exit();			break;
@@ -138,7 +149,6 @@ public class JmsShell implements IShellFramework{
 	
 	@Override
 	public void loop_start() {
-		jms_running = true;
 		while(jms_running){
 			write_to_shell( "jms client > " );
 			String input  = read_from_shell();

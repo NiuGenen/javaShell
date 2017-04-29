@@ -50,12 +50,122 @@ public class JmsShell implements IShellFramework{
 		remote_get_topics();
 	}
 	
+	/*
+	 * show information user want to know
+	 */
+	private void jms_show(String[] cmds){
+		if(cmds.length < 2){
+		}
+		
+		switch(cmds[1]){
+		case "topic":
+			for(String topic: topics){
+				write_to_shell_line("Topic: " + topic);
+			}
+			break;
+		}
+	}
+	
+	private void jms_send(String[] cmds){
+		if(cmds.length < 2) return;
+		
+		int count = cmds.length;
+		for (int i = 1; i < count; i++) {
+			String content = cmds[i];
+            context.createProducer().send(destination, content);
+        }
+		
+	}
+	
+	private void jms_exit(){
+		try {
+			if(namingContext != null)
+				namingContext.close();
+			if(jmsRT != null){
+				jmsRT.exit();
+			}
+			jms_running = false;
+		} catch (NamingException e) {
+			e.printStackTrace();
+			write_to_shell("failed to close naming context");
+		}
+	}
+	
+	private void jms_help(){
+		write_to_shell_line( get_usage() );
+	}
+	private void jms_version(){
+		write_to_shell_line( get_version() );
+	}
+	
+	/*
+	 * user management
+	 */
+	private boolean online = false;
+	private JmsUser user = null;
+	
+	private void jms_login(String[] cmds){
+		String username = null;
+		String passwd = null;
+		
+		if(cmds.length < 3){	//login username passwd
+			return;
+		}else{
+			username = cmds[1];
+			passwd = cmds[2];
+		}
+		
+		String ret = Util_http.sendPost(
+				"http://localhost:8080/shell_server/UserLoginServlet", 
+				"username=" + username +"&passwd="+passwd);
+		
+		write_to_shell_line("login : " + ret);
+		
+		try {
+			JSONObject obj = new JSONObject(ret);
+			
+			int success = obj.getInt("login");
+			
+			if(success == 1){
+				online = true;
+				write_to_shell_line("login success.");
+				if(user == null){
+					user = new JmsUser();
+				}
+				user.setUsername(username);
+			}
+			else{
+				write_to_shell_line("login failed. please try again.");
+			}
+			
+		} catch (JSONException e) {
+			write_to_shell_line("Failed to resolve JSON string in jms_login");
+			e.printStackTrace();
+		}
+	}
+	private void jms_logout(){
+		if(online){
+			online = false;
+			user = null;
+		}
+		else{
+			write_to_shell_line("Please login first.");
+		}
+	}
+	private void jms_reg(String[] cmds){
+		
+	}
+	
+	/*
+	 * publish & subscribe & read
+	 */
 	private List<String> topics = null;
 	private void remote_get_topics(){
-		String ret = Util_http.sendPost("http://localhost:8080/shell_server/GetTopicsServlet",
+		String ret = Util_http.sendPost(
+				"http://localhost:8080/shell_server/GetTopicsServlet",
 				"posttime=" + System.currentTimeMillis() );
 		
-		write_to_shell_line(ret);
+		write_to_shell_line("setup : " + ret);
 		
 		try {
 			JSONObject obj = new JSONObject(ret);
@@ -74,57 +184,55 @@ public class JmsShell implements IShellFramework{
 		}
 		
 	}
-	
-	private void jms_topics(){
-		for(String topic: topics){
-			write_to_shell_line("Topic: " + topic);
+	private void jms_publish(String[] cmds){	//pub topic title content
+		if(cmds.length < 4){
+			return;
 		}
+		String topicname = cmds[1];
+		String title = cmds[2];
+		String content = cmds[3];
 	}
-	
-	private void jms_send(String[] cmds){
-		if(cmds.length < 2) return;
-		
-		int count = cmds.length;
-		for (int i = 1; i < count; i++) {
-			String content = cmds[i];
-            context.createProducer().send(destination, content);
-        }
-		
+	private void jms_subscribe(String[] cmds){	//sub topic
+		if(cmds.length < 2){
+			return;
+		}
+		String topicname = cmds[1];
 	}
-	
+	private void jms_unsubscribe(String[] cmds){
+		if(cmds.length < 2){
+			return;
+		}
+		String topicname = cmds[1];
+	}
 	private void jms_read(String[] cmds){
-		String msg = null;
-		synchronized(msg_received){
-			 msg = msg_received.poll();
+		if(cmds.length < 2){
+			return;
 		}
-		if(msg != null) write_to_shell_line("msg:" + msg);
-		else write_to_shell_line("no message now.");
+		String topicname = cmds[1];
 	}
-	
-	private void jms_exit(){
-		try {
-			if(namingContext != null)
-				namingContext.close();
-			if(jmsRT != null){
-				jmsRT.exit();
-			}
-			jms_running = false;
-		} catch (NamingException e) {
-			e.printStackTrace();
-			write_to_shell("failed to close naming context");
-		}
-	}
-	
+
 	public void dispatch_cmd(String[] cmds) throws IOException{
 		
 		if(cmds == null || cmds.length == 0) return ;
 		
 		String command = cmds[0];
 		switch( command ){
-		case "topics":	jms_topics();		break;
-		case "send":	jms_send(cmds);		break;
-		case "read":	jms_read(cmds);		break;
-		case "exit":	jms_exit();			break;
+		case "help":
+		case "usage":		jms_help();				break;
+		case "version":		jms_version();			break;
+		case "show":		jms_show(cmds);			break;
+		case "login":		jms_login(cmds);		break;
+		case "logout":		jms_logout();			break;
+		case "reg":			jms_reg(cmds);			break;
+		case "pub":
+		case "publish":		jms_publish(cmds);		break;
+		case "sub":
+		case "subscribe":	jms_subscribe(cmds);	break;
+		case "ubsubscribe":
+		case "ubsub":		jms_unsubscribe(cmds);	break;
+		case "read":		jms_read(cmds);			break;
+		case "exit":
+		case "quit":		jms_exit();				break;
 		default:
 			break;
 		}
@@ -150,7 +258,7 @@ public class JmsShell implements IShellFramework{
 	@Override
 	public void loop_start() {
 		while(jms_running){
-			write_to_shell( "jms client > " );
+			write_to_shell( "jms client " + (online?user.getUsername():"") + " > " );
 			String input  = read_from_shell();
 			String[] cmds = get_cmds_from_input( input );
 			try {
@@ -160,17 +268,49 @@ public class JmsShell implements IShellFramework{
 			}
 		}
 	}
+	
+	private String version = "jms shell 0.1";
+	private String usage = 	
+			"usage for " + version + "\n" +
+			"command [parameter][...]" + "\n" +
+			"	show topic" + "\n" +
+			"		get the topics existed" + "\n" +
+			"	show published" + "\n" +
+			"		get the news that you have published" + "\n" +
+			"		only works at inline state" + "\n" +
+			"	version" + "\n" +
+			"		get the version of jms shell" + "\n" +
+			"	login [username] [password]" + "\n" +
+			"		login via username and password" + "\n" +
+			"		only works at offline state" + "\n" +
+			"	logout" + "\n" +
+			"		only works at inline state" + "\n" +
+			"	reg [username] [passwd]" + "\n" +
+			"		register a new user" + "\n" +
+			"		only works at offline state" + "\n" +
+			"	publish [topicname] [title] [content]" + "\n" +
+			"		publish one news on this topic" + "\n" +
+			"	subscribe [topicname]" + "\n" +
+			"		subscribe this topic" + "\n" +
+			"	ubsubscribe [topicname]" + "\n" +
+			"		ubsubscribe this topic" + "\n" +
+			"	read [topicname]" + "\n" +
+			"		if newer news is published on this topic, read it" + "\n" +
+			"		only when this news is published while you are online" + "\n" +
+			"	help (or 'usage')" + "\n" +
+			"		get what you are reading" + "\n" +
+			"	exit (or 'quit')" + "\n" +
+			"		exit from jms shell"
+								;
 
 	@Override
 	public String get_version() {
-		// TODO Auto-generated method stub
-		return null;
+		return version;
 	}
 
 	@Override
 	public String get_usage() {
-		// TODO Auto-generated method stub
-		return null;
+		return usage;
 	}
 
 	

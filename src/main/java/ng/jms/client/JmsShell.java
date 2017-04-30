@@ -31,7 +31,6 @@ import ng.com.util.Util_http;
 @SuppressWarnings("unused")
 public class JmsShell implements IShellFramework{
 
-	
 	private Context namingContext;					//create by me
 	private Destination destination;				//create by naming context via JNDI
 	private ConnectionFactory connectionFactory;	//create by naming context via factory name
@@ -154,6 +153,9 @@ public class JmsShell implements IShellFramework{
 	/*
 	 * user management
 	 */
+	private Map<String, Queue<JmsNews>> topics_map_msg_rec = null;
+	private Map<String, JmsReceiveThread> topics_map_thread = null;
+	
 	private boolean online = false;
 	private JmsUser user = null;
 	
@@ -197,11 +199,25 @@ public class JmsShell implements IShellFramework{
 				//set user's unique id
 				int userid = obj.getInt("userid");
 				user.setUserid(userid);
+				//set user's published news
+				JSONArray news = obj.getJSONArray("news");
+				if(user.getNews_published() == null)
+					user.setNews_published(new LinkedList<JmsNews>());
+				for(int i = 0; i < news.length(); ++i){
+					JSONObject json_news = news.getJSONObject(i);
+					JmsNews jms_news = new JmsNews(json_news);
+					user.getNews_published().add(jms_news);
+				}
 				//build up topic map message queue to receive and its thread
 				JmsReceiveThreadCreatThread th = new JmsReceiveThreadCreatThread();
+				if(topics_map_msg_rec == null)	//map: topic name -> queue to receive
+					topics_map_msg_rec = new HashMap<String, Queue<JmsNews>>();
+				if(topics_map_thread == null)//map: topic name -> receive thread
+					topics_map_thread = new HashMap<String, JmsReceiveThread>();
 				th.setup(user.getTopic_subscribed(),
 						topics_map_msg_rec,	//sync
 						topics_map_dest, 	//sync
+						topics_map_thread,	//sync
 						namingContext,
 						jms_context);
 				th.start();
@@ -219,6 +235,13 @@ public class JmsShell implements IShellFramework{
 		if(online){
 			online = false;
 			user = null;
+			if(topics_map_thread != null){
+				for(JmsReceiveThread th: topics_map_thread.values()){
+					th.exit();
+				}
+			}
+			topics_map_msg_rec = null;
+			topics_map_thread = null;
 		}
 		else{
 			write_to_shell_line("Please login first.");
@@ -233,7 +256,6 @@ public class JmsShell implements IShellFramework{
 	 */
 	private Map<String, Integer> topics_map_id = null;
 	private Map<String, Destination> topics_map_dest = null;
-	private Map<String, Queue<JmsNews>> topics_map_msg_rec = null;
 	private void remote_get_topics(){
 		String ret = Util_http.sendPost(
 				"http://localhost:8080/shell_server/GetTopicsServlet",
@@ -248,8 +270,6 @@ public class JmsShell implements IShellFramework{
 			
 			if(topics_map_id == null)	//map: topic name -> topic id
 				topics_map_id = new HashMap<String, Integer>( );
-			if(topics_map_msg_rec == null)	//map: topic name -> queue to receive
-				topics_map_msg_rec = new HashMap<String, Queue<JmsNews>>();
 			if(topics_map_dest == null)	//map: topic name -> destination to publish 
 				topics_map_dest = new HashMap<String, Destination>();
 			
@@ -263,7 +283,7 @@ public class JmsShell implements IShellFramework{
 				topics_map_id.put(topicname, topicid);
 			}
 			
-			//lazy topic map destination : build destination when publish
+			//lazy topic map destination : build destination when publish or when receive thread is created
 			
 		} catch (JSONException e) {
 			write_to_shell_line("Failed to resolve JSON string in remote_get_topics");
@@ -337,12 +357,98 @@ public class JmsShell implements IShellFramework{
 			return;
 		}
 		String topicname = cmds[1];
+		
+		if(user.getTopic_subscribed().contains(topicname)){
+			write_to_shell_line("You already have subscribed topic [" + topicname +"].");
+			return;
+		}
+		
+		String ret = Util_http.sendPost(
+				"http://localhost:8080/shell_server/UserSubscribeServlet",
+				"userid=" + user.getUserid() +"&" +
+				"topicid=" + topics_map_id.get(topicname) +"&" +
+				"topicname=" + topicname + "&" +
+				"subscribe=True" );
+		
+		try {
+			JSONObject obj = new JSONObject( ret );
+			if(Boolean.parseBoolean( obj.getString("subscribe"))){
+				write_to_shell_line("Subscribe succeed.");
+				user.getTopic_subscribed().add( topicname );
+				
+				write_to_shell_line("processing topic [" + topicname + "] in jms_subscribe.");
+				//get destination
+				Destination dest = null;
+				synchronized(topics_map_dest){
+					dest = topics_map_dest.get(topicname);
+					if(dest == null){
+						try {
+							dest = (Destination) namingContext.lookup("jms/topic/" + topicname );
+						} catch (NamingException e) {
+							write_to_shell_line("Fail to create destination for topic :" + topicname + " in jms_subscribe.");
+							e.printStackTrace();
+						}
+						write_to_shell_line("Create destination for topic :" + topicname + " in jms_subscribe.");
+					}
+					topics_map_dest.put(topicname, dest);
+				}
+				//create queue
+				Queue<JmsNews> queue = new LinkedList<JmsNews>();
+				//set queue
+				synchronized(topics_map_msg_rec){
+					topics_map_msg_rec.put(topicname, queue);
+				}
+				//create thread for this queue
+				JmsReceiveThread th = new JmsReceiveThread();
+				th.setup(topicname, queue, jms_context.createConsumer(dest));
+				th.start();
+				//save thread
+				topics_map_thread.put(topicname, th);
+			}
+			else{
+				write_to_shell_line("Subscribe maybe fail.");
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 	}
 	private void jms_unsubscribe(String[] cmds){
 		if(cmds.length < 2){
 			return;
 		}
 		String topicname = cmds[1];
+		
+		if(!user.getTopic_subscribed().contains(topicname)){
+			write_to_shell_line("You haven't subscribed topic [" + topicname + "].");
+			return ;
+		}
+		
+		String ret = Util_http.sendPost(
+				"http://localhost:8080/shell_server/UserSubscribeServlet",
+				"userid=" + user.getUserid() +"&" +
+				"topicid=" + topics_map_id.get(topicname) +"&" +
+				"topicname=" + topicname + "&" +
+				"subscribe=False" );
+		
+		try {
+			JSONObject obj = new JSONObject( ret );
+			if(Boolean.parseBoolean( obj.getString("subscribe"))){
+				write_to_shell_line("Unsubscribe succeed.");
+				user.getTopic_subscribed().remove( topicname );
+				//receive thread for this topic shoule exit
+				JmsReceiveThread th = topics_map_thread.get(topicname);
+				if(th != null){
+					th.exit();
+					topics_map_thread.remove(topicname);
+				}
+				
+			}
+			else{
+				write_to_shell_line("Unsubscribe maybe fail.");
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 	}
 	private void jms_read(String[] cmds){
 		if(cmds.length < 2){
@@ -356,13 +462,17 @@ public class JmsShell implements IShellFramework{
 		}
 		
 		Queue<JmsNews> queue = topics_map_msg_rec.get(topicname);
-		JmsNews news = queue.poll();
-		if(news == null){
-			write_to_shell_line("There is no more news.");
-			return;
+		if(queue != null){
+			JmsNews news = queue.poll();
+			if(news == null){
+				write_to_shell_line("There is no more news.");
+				return;
+			}
+			write_to_shell( news.toString() );
 		}
-		
-		write_to_shell( news.toString() );
+		else{	//queue == null
+			write_to_shell_line("Fail to get queue for this topic.");
+		}
 	}
 
 	public void dispatch_cmd(String[] cmds) throws IOException{
@@ -466,7 +576,4 @@ public class JmsShell implements IShellFramework{
 	public String get_usage() {
 		return usage;
 	}
-
-	
-	
 }

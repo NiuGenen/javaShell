@@ -248,7 +248,36 @@ public class JmsShell implements IShellFramework{
 		}
 	}
 	private void jms_reg(String[] cmds){
-		if(online) return;
+		if(online){
+			write_to_shell_line("Please register new user when you are offline.");
+			return;
+		}
+		
+		String username = cmds[1];
+		String passwd = cmds[2];
+		
+		String ret = Util_http.sendPost(
+				"http://localhost:8080/shell_server/UserRegServlet",
+				"username=" + username + "&" +
+				"password=" + passwd );
+		
+		try{
+			JSONObject obj = new JSONObject(ret);
+			
+			boolean success = obj.getBoolean("register");
+			
+			if(success){
+				write_to_shell_line("Register succeed.");
+			}
+			else{
+				write_to_shell_line("Register failed.");
+			}
+			
+		}catch(JSONException e){
+			write_to_shell_line("Failed to resolve JSON string in jms_reg.");
+			write_to_shell_line("There is a posibility that you failed to register.");
+			return;
+		}
 	}
 	
 	/*
@@ -539,7 +568,7 @@ public class JmsShell implements IShellFramework{
 			"command [parameter][...]" + "\n" +
 			"	show topic" + "\n" +
 			"		get the topics existed" + "\n" +
-			"	show published" + "\n" +
+			"	show publish" + "\n" +
 			"		get the news that you have published" + "\n" +
 			"		only works at inline state" + "\n" +
 			"	version" + "\n" +

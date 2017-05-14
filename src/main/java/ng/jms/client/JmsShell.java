@@ -1,6 +1,10 @@
 package ng.jms.client;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -20,6 +24,7 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.utils.json.JSONArray;
 import org.apache.activemq.artemis.utils.json.JSONException;
 import org.apache.activemq.artemis.utils.json.JSONObject;
@@ -44,7 +49,13 @@ public class JmsShell implements IShellFramework{
     private static final String DEFAULT_PASSWORD = "jms1pwd";
     private static final String INITIAL_CONTEXT_FACTORY = "org.jboss.naming.remote.client.InitialContextFactory";
     private static final String PROVIDER_URL = "http-remoting://127.0.0.1:8080";
-	
+    //private static final String PROVIDER_URL = "http-remoting://niugenen.6655.la:8080";
+    //private static final String PROVIDER_URL = "http-remoting://niugenen.6655.la:port";
+    //private static final String PROVIDER_URL = "http-remoting://192.168.1.151:8080";
+    
+    private static final String DEFAULT_HTTP_URL = "http://localhost:8080";
+    //private static final String DEFAULT_HTTP_URL = "http://niugenen.6655.la:port";
+    
 	@Override
 	public void setup(Object o) {
 		write_to_shell_line("setup jms client...");
@@ -62,14 +73,18 @@ public class JmsShell implements IShellFramework{
              env.put(Context.SECURITY_CREDENTIALS, password);
              namingContext = new InitialContext(env);
              
-
              String connectionFactoryString = System.getProperty("connection.factory", DEFAULT_CONNECTION_FACTORY);
              connectionFactory = (ConnectionFactory) namingContext.lookup(connectionFactoryString);
 
              //String destinationString = System.getProperty("destination", DEFAULT_DESTINATION);
              //Destination destination = (Destination) namingContext.lookup(destinationString);
+             //Context jmsctx = null;
+			 //jmsctx = (InitialContext)Naming.lookup("java:global/JmsServer");
+             //ActiveMQConnectionFactory cf = (ActiveMQConnectionFactory)jmsctx .lookup("jms/RemoteConnectionFactory");
              
              jms_context = connectionFactory.createContext(userName, password);
+             //jms_context = cf.createContext(userName, password);
+             
              jms_producer = jms_context.createProducer();
              //context.createProducer().send(destination, content);
              //consumer.receiveBody(String.class, 5000);
@@ -171,7 +186,7 @@ public class JmsShell implements IShellFramework{
 		}
 		
 		String ret = Util_http.sendPost(
-				"http://localhost:8080/shell_server/UserLoginServlet", 
+				DEFAULT_HTTP_URL + "/shell_server/UserLoginServlet", 
 				"username=" + username +"&passwd="+passwd);
 		
 		write_to_shell_line("login : " + ret);
@@ -257,7 +272,7 @@ public class JmsShell implements IShellFramework{
 		String passwd = cmds[2];
 		
 		String ret = Util_http.sendPost(
-				"http://localhost:8080/shell_server/UserRegServlet",
+				DEFAULT_HTTP_URL + "/shell_server/UserRegServlet",
 				"username=" + username + "&" +
 				"password=" + passwd );
 		
@@ -287,7 +302,7 @@ public class JmsShell implements IShellFramework{
 	private Map<String, Destination> topics_map_dest = null;
 	private void remote_get_topics(){
 		String ret = Util_http.sendPost(
-				"http://localhost:8080/shell_server/GetTopicsServlet",
+				DEFAULT_HTTP_URL + "/shell_server/GetTopicsServlet",
 				"posttime=" + System.currentTimeMillis() );
 		//get returned json {'topics':[{'id':'','name':''},{...}]}
 		write_to_shell_line("remote_get_topics : " + ret);
@@ -393,7 +408,7 @@ public class JmsShell implements IShellFramework{
 		}
 		
 		String ret = Util_http.sendPost(
-				"http://localhost:8080/shell_server/UserSubscribeServlet",
+				DEFAULT_HTTP_URL + "/shell_server/UserSubscribeServlet",
 				"userid=" + user.getUserid() +"&" +
 				"topicid=" + topics_map_id.get(topicname) +"&" +
 				"topicname=" + topicname + "&" +
@@ -453,7 +468,7 @@ public class JmsShell implements IShellFramework{
 		}
 		
 		String ret = Util_http.sendPost(
-				"http://localhost:8080/shell_server/UserSubscribeServlet",
+				DEFAULT_HTTP_URL + "/shell_server/UserSubscribeServlet",
 				"userid=" + user.getUserid() +"&" +
 				"topicid=" + topics_map_id.get(topicname) +"&" +
 				"topicname=" + topicname + "&" +

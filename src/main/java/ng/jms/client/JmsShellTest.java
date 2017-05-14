@@ -24,17 +24,17 @@ public class JmsShellTest implements IShellFramework{
     private static final String DEFAULT_PASSWORD = "jms1pwd";
     private static final String INITIAL_CONTEXT_FACTORY = "org.jboss.naming.remote.client.InitialContextFactory";
     private static final String PROVIDER_URL = "http-remoting://127.0.0.1:8080";
+    //private static final String PROVIDER_URL = "http-remoting://niugenen.6655.la:port";
+    //private static final String PROVIDER_URL = "http-remoting://192.168.1.151:8080";
 	
 	private Queue<String> msg_received = null;
 	private JmsReceiveThreadTest jmsRT = null;
 	@Override
 	public void setup(Object o) {
 		msg_received = new LinkedList<>();
-
 		try{
             userName = System.getProperty("username", DEFAULT_USERNAME);
             password = System.getProperty("password", DEFAULT_PASSWORD);
-
             // Set up the namingContext for the JNDI lookup
             final Properties env = new Properties();
             env.put(Context.INITIAL_CONTEXT_FACTORY, INITIAL_CONTEXT_FACTORY);
@@ -42,23 +42,17 @@ public class JmsShellTest implements IShellFramework{
             env.put(Context.SECURITY_PRINCIPAL, userName);
             env.put(Context.SECURITY_CREDENTIALS, password);
             namingContext = new InitialContext(env);
-
             // Perform the JNDI lookups
             String connectionFactoryString = System.getProperty("connection.factory", DEFAULT_CONNECTION_FACTORY);
-
             connectionFactory = (ConnectionFactory) namingContext.lookup(connectionFactoryString);
-
             String destinationString = System.getProperty("destination", DEFAULT_DESTINATION);
-
             destination = (Destination) namingContext.lookup(destinationString);
-
     		context = connectionFactory.createContext(userName, password);
-    		
+    		//start background thread to consume
     		jmsRT = new JmsReceiveThreadTest();
     		JMSConsumer consumer = context.createConsumer(destination);
     		jmsRT.setup(msg_received, consumer);
     		jmsRT.start();
-    		
 		} catch(Exception e){
 			e.printStackTrace();
 		}
